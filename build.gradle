@@ -1,0 +1,26 @@
+group 'ee.evrcargo'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // compile group: 'javax.mail', name: 'javax.mail-api', version: '1.5.6'
+    compile group: 'com.sun.mail', name: 'javax.mail', version: '1.5.6'
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
+
+jar {
+    manifest {
+        attributes "Main-Class": "ee.evrcargo.imap.Runner"
+    }
+
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
