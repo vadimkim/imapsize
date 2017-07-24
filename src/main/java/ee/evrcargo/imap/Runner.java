@@ -1,7 +1,5 @@
 package ee.evrcargo.imap;
 
-import com.sun.mail.imap.IMAPFolder;
-
 import javax.mail.*;
 import javax.mail.internet.MimeMessage;
 import java.io.*;
@@ -9,9 +7,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
+
+import static javax.mail.Folder.HOLDS_FOLDERS;
 
 /**
  * Created by vadim.kimlaychuk on 10-Jul-17.
@@ -22,6 +22,7 @@ public class Runner {
     private static long totalSize = 0L;
     private static Configuration conf = new Configuration();
     private static Session session = Session.getInstance(conf, null);
+    private static Store store;
 
     public static void main(String[] args) {
         long startTime = System.currentTimeMillis();
@@ -44,7 +45,7 @@ public class Runner {
             System.out.println("Checking mailbox " + conf.getProperty("mailbox.user") + " at " + conf.getProperty("mailbox.domain"));
             check();
         } else if (args[0].compareTo("-r") == 0) {
-            System.out.println("... Not implemented");
+            restore();
         } else {
             System.out.println("Unknown option");
         }
@@ -52,20 +53,112 @@ public class Runner {
         System.exit(0);
     }
 
+    private static Folder getDefaultFolder() {
+        try {
+            store = session.getStore();
+            store.connect(conf.getProperty("mailbox.user"), conf.getProperty("mailbox.password"));
+            return store.getDefaultFolder();
+        } catch (MessagingException e) {
+            System.out.println(e.getMessage());
+        }
+        return null;
+    }
+
+    private static void restore() {
+        try {
+            System.out.println("Reading local folder structure...");
+            String basePath = conf.getProperty("mailbox.restore.base");
+            Folder rootImap = getDefaultFolder();
+            if (rootImap == null) {
+                System.out.println("No root IMAP folder! Exiting...");
+                System.exit(-1);
+            }
+            restoreFolder (basePath);
+            store.close();
+        } catch (MessagingException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    private static void restoreFolder(String diskFolder) {
+        try {
+            // Create list of files at backup location
+            List<String> existFiles = Files.walk(Paths.get(diskFolder), 1)
+                    .filter(Files::isRegularFile)
+                    .filter(p -> !p.toString().endsWith(".png"))
+                    .map(Path::toFile)
+                    .map(File::getName)
+                    .collect(Collectors.toList());
+
+            if (existFiles.size() > 0) restoreMessages(diskFolder, existFiles);
+
+            // Check if there are any subfolder to explore
+            List<String> existFolders = Files.walk(Paths.get(diskFolder), 1)
+                    .filter(Files::isDirectory)
+                    .filter(p -> !p.toFile().getName().equals(diskFolder.substring(diskFolder.lastIndexOf("/") + 1)))
+                    .map(Path::toFile)
+                    .map(File::getName)
+                    .collect(Collectors.toList());
+
+            if (existFolders.size() > 0) {
+                for (String folder : existFolders) {
+                    restoreFolder(diskFolder + "/" + folder);
+                }
+            }
+
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+
+    }
+
+    private static void restoreMessages(String diskFolder, List<String> existingFiles) {
+            try {
+                String str = diskFolder.replaceFirst(conf.getProperty("mailbox.restore.base") + "/", "");
+                Folder remote = store.getFolder(str);
+                System.out.println("Reading remote folder: " + remote.getName() + "...");
+                if (!remote.exists()) {
+                    System.out.println("Creating new folder at remote: " + remote.getFullName());
+                    remote.create(Folder.HOLDS_FOLDERS + Folder.HOLDS_MESSAGES);
+                }
+                remote.open(Folder.READ_WRITE);
+                UIDFolder uf = (UIDFolder) remote; // cast folder to UIDFolder interface
+                Message [] messages = remote.getMessages(); // get remote messages array
+                ArrayList<Long> uuids = new ArrayList<>();
+
+                // Compare remote message UUID with local copy and if not exists - restore the message
+                for (Message msg : messages) {
+                    uuids.add(uf.getUID(msg));
+                }
+
+                int i = 1;
+                int k = 0;
+                for (String file: existingFiles) {
+                    System.out.print("Restoring message " + i + "/" + existingFiles.size() + "\r");
+                    if (!uuids.contains(Long.valueOf(file))) {
+                        Message msg = new MimeMessage(session, new FileInputStream(diskFolder + "/" + file));
+                        remote.appendMessages(new Message[] {msg});
+                        k++;
+                     }
+                    i++;
+                }
+                System.out.println();
+                System.out.println("...from which " + k + " were new");
+                remote.close(false);
+
+            } catch (IOException e) {
+                System.out.println(e.getMessage());
+            } catch (MessagingException e) {
+                e.printStackTrace();
+            }
+    }
+
     private static void backup() {
         try {
-            Store store = session.getStore();
-            store.connect(conf.getProperty("mailbox.user"), conf.getProperty("mailbox.password"));
-            Folder folder = store.getDefaultFolder();
-
-            backupFolder(folder, true);
-            store.close();
-
+            backupFolder(getDefaultFolder());
             System.out.println("\nBackup messages: " + totalMessages);
             System.out.println("Backup size: " + nf.format(totalSize) + " bytes");
-
-        } catch (MessagingException mex) {
-            System.out.println(mex.getMessage());
+            store.close();
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -74,22 +167,17 @@ public class Runner {
 
     private static void check() {
         try {
-            Store store = session.getStore();
-            store.connect(conf.getProperty("mailbox.user"), conf.getProperty("mailbox.password"));
-            Folder folder = store.getDefaultFolder();
-
             System.out.println("Reading folder structure...");
-            dumpFolder(folder, true, "");
-            store.close();
+            dumpFolder(getDefaultFolder(),  "");
             System.out.println("\nTotal messages: " + totalMessages);
             System.out.println("Total size: " + nf.format(totalSize) + " bytes");
-
+            store.close();
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
     }
 
-    private static void backupFolder(Folder folder, boolean recurse) throws Exception {
+    private static void backupFolder(Folder folder) throws Exception {
         if ((folder.getType() & Folder.HOLDS_MESSAGES) != 0 && folder.getMessageCount() > 0) {
             totalMessages += folder.getMessageCount();
             if (!folder.isOpen()) {
@@ -99,13 +187,10 @@ public class Runner {
             folder.close(false);
         }
 
-
         // Check if there are any subfolder to explore
-        if ((folder.getType() & Folder.HOLDS_FOLDERS) != 0) {
-            if (recurse) {
-                Folder[] f = folder.list();
-                for (Folder fld : f) backupFolder(fld, recurse);
-            }
+        if ((folder.getType() & HOLDS_FOLDERS) != 0) {
+               Folder[] f = folder.list();
+                for (Folder fld : f) backupFolder(fld);
         }
     }
 
@@ -116,7 +201,7 @@ public class Runner {
         System.out.println("Saving folder: " + folder.getFullName());
 
         // Create list of the existing files to remove them from synchronization
-        List<String> existingFiles = Files.walk(Paths.get(folderPath))
+        List<String> existingFiles = Files.walk(Paths.get(folderPath), 1)
                 .filter(Files::isRegularFile)
                 .map(Path::toFile)
                 .map(File::getName)
@@ -134,10 +219,7 @@ public class Runner {
                     OutputStream os = new FileOutputStream(f);
                     msg.writeTo(os);
                     os.close();
-                } else {
-                    // skip existing file
                 }
-
             } catch (IOException e) {
                 System.out.println(e.getMessage());
             }
@@ -147,7 +229,7 @@ public class Runner {
         totalSize += size;
     }
 
-    private static void dumpFolder(Folder folder, boolean recurse, String tab) throws Exception {
+    private static void dumpFolder(Folder folder, String tab) throws Exception {
         if ((folder.getType() & Folder.HOLDS_MESSAGES) != 0 && folder.getMessageCount() > 0) {
             System.out.println();
             System.out.println(tab + "Name:      " + folder.getName());
@@ -168,31 +250,16 @@ public class Runner {
         }
 
         // Check if there are any subfolder to explore
-        if ((folder.getType() & Folder.HOLDS_FOLDERS) != 0) {
-            if (recurse) {
+        if ((folder.getType() & HOLDS_FOLDERS) != 0) {
                 Folder[] f = folder.list();
-                for (Folder fld : f) dumpFolder(fld, recurse, tab + "    ");
-            }
+                for (Folder fld : f) dumpFolder(fld, tab + "    ");
         }
     }
 
     private static String getSize(Folder folder) throws MessagingException {
-        UIDFolder uf = (UIDFolder) folder; // cast folder to UIDFolder interface
         Message[] messages = folder.getMessages();
         long size = 0L;
-        for (Message msg : messages) {
-            size = size + msg.getSize();
-//            try {
-//                //            Message m = new MimeMessage(session, new FileInputStream("1"));
-//                //            System.out.println(m.getSubject());
-//                File f = new File(String.valueOf(uf.getUID(msg)));
-//                OutputStream os = new FileOutputStream(f);
-//                msg.writeTo(os);
-//                os.close();
-//            } catch (IOException e) {
-//                System.out.println(e.getMessage());
-//            }
-        }
+        for (Message msg : messages) size = size + msg.getSize();
         totalSize += size;
         return nf.format(size);
     }
