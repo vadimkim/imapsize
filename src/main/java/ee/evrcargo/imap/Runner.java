@@ -7,7 +7,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.NumberFormat;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -53,6 +52,10 @@ public class Runner {
         System.exit(0);
     }
 
+    /**
+     * Connect to remote IMAP server and return root folder
+     * @return  - root Folder
+     */
     private static Folder getDefaultFolder() {
         try {
             store = session.getStore();
@@ -80,6 +83,10 @@ public class Runner {
         }
     }
 
+    /**
+     * Check folder to restore
+     * @param diskFolder - local folder name
+     */
     private static void restoreFolder(String diskFolder) {
         try {
             // Create list of files at backup location
@@ -112,6 +119,11 @@ public class Runner {
 
     }
 
+    /**
+     * Restore messages to IMAP folder from local disk copy
+     * @param diskFolder    - local folder
+     * @param existingFiles - list of local filenames
+     */
     private static void restoreMessages(String diskFolder, List<String> existingFiles) {
         try {
             String str = diskFolder.replaceFirst(conf.getProperty("mailbox.restore.base") + "/", "");
@@ -216,6 +228,12 @@ public class Runner {
         totalSize += size;
     }
 
+    /**
+     * Show information about remote IMAP folder
+     * @param folder    - IMAP folder
+     * @param tab       - indentation
+     * @throws Exception
+     */
     private static void dumpFolder(Folder folder, String tab) throws Exception {
         if ((folder.getType() & Folder.HOLDS_MESSAGES) != 0 && folder.getMessageCount() > 0) {
             System.out.println();
