@@ -176,7 +176,7 @@ public class Runner {
     }
 
     private static String join(String[] ids) {
-        StringBuffer buf = new StringBuffer();
+        StringBuilder buf = new StringBuilder();
         for (String id : ids) {
             buf.append(id);
         }
@@ -228,8 +228,8 @@ public class Runner {
      * Backup messages from IMAP folder to local drive.
      *
      * @param folder - remote IMAP folder
-     * @throws MessagingException
-     * @throws IOException
+     * @throws MessagingException -- IMAP exception
+     * @throws IOException -- file exception
      */
     private static void backupMessages(Folder folder) throws MessagingException, IOException {
         UIDFolder uf = (UIDFolder) folder; // cast folder to UIDFolder interface
@@ -271,9 +271,9 @@ public class Runner {
      *
      * @param folder - IMAP folder
      * @param tab    - indentation
-     * @throws Exception
+     * @throws MessagingException -- IMAP exception
      */
-    private static void dumpFolder(Folder folder, String tab) throws Exception {
+    private static void dumpFolder(Folder folder, String tab) throws MessagingException {
         if ((folder.getType() & Folder.HOLDS_MESSAGES) != 0 && folder.getMessageCount() > 0) {
             System.out.println();
             System.out.println(tab + "Name:      " + folder.getName());
