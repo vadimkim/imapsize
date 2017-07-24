@@ -73,7 +73,7 @@ public class Runner {
                 System.out.println("No root IMAP folder! Exiting...");
                 System.exit(-1);
             }
-            restoreFolder (basePath);
+            restoreFolder(basePath);
             store.close();
         } catch (MessagingException e) {
             System.out.println(e.getMessage());
@@ -113,44 +113,31 @@ public class Runner {
     }
 
     private static void restoreMessages(String diskFolder, List<String> existingFiles) {
-            try {
-                String str = diskFolder.replaceFirst(conf.getProperty("mailbox.restore.base") + "/", "");
-                Folder remote = store.getFolder(str);
-                System.out.println("Reading remote folder: " + remote.getName() + "...");
-                if (!remote.exists()) {
-                    System.out.println("Creating new folder at remote: " + remote.getFullName());
-                    remote.create(Folder.HOLDS_FOLDERS + Folder.HOLDS_MESSAGES);
-                }
-                remote.open(Folder.READ_WRITE);
-                UIDFolder uf = (UIDFolder) remote; // cast folder to UIDFolder interface
-                Message [] messages = remote.getMessages(); // get remote messages array
-                ArrayList<Long> uuids = new ArrayList<>();
-
-                // Compare remote message UUID with local copy and if not exists - restore the message
-                for (Message msg : messages) {
-                    uuids.add(uf.getUID(msg));
-                }
-
-                int i = 1;
-                int k = 0;
-                for (String file: existingFiles) {
-                    System.out.print("Restoring message " + i + "/" + existingFiles.size() + "\r");
-                    if (!uuids.contains(Long.valueOf(file))) {
-                        Message msg = new MimeMessage(session, new FileInputStream(diskFolder + "/" + file));
-                        remote.appendMessages(new Message[] {msg});
-                        k++;
-                     }
-                    i++;
-                }
-                System.out.println();
-                System.out.println("...from which " + k + " were new");
-                remote.close(false);
-
-            } catch (IOException e) {
-                System.out.println(e.getMessage());
-            } catch (MessagingException e) {
-                e.printStackTrace();
+        try {
+            String str = diskFolder.replaceFirst(conf.getProperty("mailbox.restore.base") + "/", "");
+            Folder remote = store.getFolder(str);
+            System.out.println("Reading remote folder: " + remote.getName() + "...");
+            if (!remote.exists()) {
+                System.out.println("Creating new folder at remote: " + remote.getFullName());
+                remote.create(Folder.HOLDS_FOLDERS + Folder.HOLDS_MESSAGES);
             }
+            remote.open(Folder.READ_WRITE);
+
+            int i = 1;
+            for (String file : existingFiles) {
+                System.out.print("Restoring message " + i + "/" + existingFiles.size() + "\r");
+                Message msg = new MimeMessage(session, new FileInputStream(diskFolder + "/" + file));
+                remote.appendMessages(new Message[]{msg});
+                i++;
+            }
+            System.out.println();
+            remote.close(false);
+
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        } catch (MessagingException e) {
+            e.printStackTrace();
+        }
     }
 
     private static void backup() {
@@ -168,7 +155,7 @@ public class Runner {
     private static void check() {
         try {
             System.out.println("Reading folder structure...");
-            dumpFolder(getDefaultFolder(),  "");
+            dumpFolder(getDefaultFolder(), "");
             System.out.println("\nTotal messages: " + totalMessages);
             System.out.println("Total size: " + nf.format(totalSize) + " bytes");
             store.close();
@@ -189,8 +176,8 @@ public class Runner {
 
         // Check if there are any subfolder to explore
         if ((folder.getType() & HOLDS_FOLDERS) != 0) {
-               Folder[] f = folder.list();
-                for (Folder fld : f) backupFolder(fld);
+            Folder[] f = folder.list();
+            for (Folder fld : f) backupFolder(fld);
         }
     }
 
@@ -251,8 +238,8 @@ public class Runner {
 
         // Check if there are any subfolder to explore
         if ((folder.getType() & HOLDS_FOLDERS) != 0) {
-                Folder[] f = folder.list();
-                for (Folder fld : f) dumpFolder(fld, tab + "    ");
+            Folder[] f = folder.list();
+            for (Folder fld : f) dumpFolder(fld, tab + "    ");
         }
     }
 
