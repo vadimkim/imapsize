@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,7 +29,7 @@ public class Runner {
         if (args.length == 0) {
             System.out.println("IMAP mailbox backup/restore util.");
             System.out.println("Edit build/resources/mbox.properties file before executing commands");
-            System.out.println("NB! Folders with size = 0 are excluded from processing");
+            System.out.println("NB! Folders with size = 0 are excluded from processing. Calendar folder considered to be unnecessary and also not processed.");
             System.out.println("BSD License. Written by VK Copyright (c) 2017 EVR Cargo.");
             System.out.println();
             System.out.println("-b  backup mailbox");
@@ -54,7 +55,8 @@ public class Runner {
 
     /**
      * Connect to remote IMAP server and return root folder
-     * @return  - root Folder
+     *
+     * @return - root Folder
      */
     private static Folder getDefaultFolder() {
         try {
@@ -85,6 +87,7 @@ public class Runner {
 
     /**
      * Check folder to restore
+     *
      * @param diskFolder - local folder name
      */
     private static void restoreFolder(String diskFolder) {
@@ -93,6 +96,7 @@ public class Runner {
             List<String> existFiles = Files.walk(Paths.get(diskFolder), 1)
                     .filter(Files::isRegularFile)
                     .filter(p -> !p.toString().endsWith(".png"))
+                    .filter(p -> !p.toString().contains("Calendar"))   // do not sync Calendars
                     .map(Path::toFile)
                     .map(File::getName)
                     .collect(Collectors.toList());
@@ -121,6 +125,7 @@ public class Runner {
 
     /**
      * Restore messages to IMAP folder from local disk copy
+     *
      * @param diskFolder    - local folder
      * @param existingFiles - list of local filenames
      */
@@ -135,14 +140,32 @@ public class Runner {
             }
             remote.open(Folder.READ_WRITE);
 
+            // Create list of message ID-s on the server
+            List<String> msgIds = new ArrayList<>();
+            Message[] messages = remote.getMessages();
+
+            System.out.println("Getting server message id-s:");
             int i = 1;
+            for (Message msg : messages) {
+                System.out.print("Reading message " + i + "/" + messages.length + "\r");
+                String[] id = msg.getHeader("Message-ID");
+                msgIds.add(join(id));
+                i++;
+            }
+
+            i = 1;
+            int k = 0;
             for (String file : existingFiles) {
                 System.out.print("Restoring message " + i + "/" + existingFiles.size() + "\r");
                 Message msg = new MimeMessage(session, new FileInputStream(diskFolder + "/" + file));
-                remote.appendMessages(new Message[]{msg});
+                if (!msgIds.contains(join(msg.getHeader("Message-ID")))) {
+                    remote.appendMessages(new Message[]{msg});
+                    k++;
+                }
                 i++;
             }
             System.out.println();
+            System.out.println("... from which " + k + " are new");
             remote.close(false);
 
         } catch (IOException e) {
@@ -150,6 +173,14 @@ public class Runner {
         } catch (MessagingException e) {
             e.printStackTrace();
         }
+    }
+
+    private static String join(String[] ids) {
+        StringBuffer buf = new StringBuffer();
+        for (String id : ids) {
+            buf.append(id);
+        }
+        return buf.toString();
     }
 
     private static void backup() {
@@ -177,7 +208,7 @@ public class Runner {
     }
 
     private static void backupFolder(Folder folder) throws Exception {
-        if ((folder.getType() & Folder.HOLDS_MESSAGES) != 0 && folder.getMessageCount() > 0) {
+        if ((folder.getType() & Folder.HOLDS_MESSAGES) != 0 && folder.getMessageCount() > 0 && !folder.getFullName().contentEquals("Calendar")) {  // skip Calendar
             totalMessages += folder.getMessageCount();
             if (!folder.isOpen()) {
                 folder.open(Folder.READ_ONLY);
@@ -193,6 +224,13 @@ public class Runner {
         }
     }
 
+    /**
+     * Backup messages from IMAP folder to local drive.
+     *
+     * @param folder - remote IMAP folder
+     * @throws MessagingException
+     * @throws IOException
+     */
     private static void backupMessages(Folder folder) throws MessagingException, IOException {
         UIDFolder uf = (UIDFolder) folder; // cast folder to UIDFolder interface
         String folderPath = "backup/" + conf.getProperty("mailbox.domain") + "/" + conf.getProperty("mailbox.user") + "/" + folder.getFullName() + "/";
@@ -230,8 +268,9 @@ public class Runner {
 
     /**
      * Show information about remote IMAP folder
-     * @param folder    - IMAP folder
-     * @param tab       - indentation
+     *
+     * @param folder - IMAP folder
+     * @param tab    - indentation
      * @throws Exception
      */
     private static void dumpFolder(Folder folder, String tab) throws Exception {
