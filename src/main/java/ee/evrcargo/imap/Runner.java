@@ -1,14 +1,16 @@
 package ee.evrcargo.imap;
 
 import javax.mail.*;
+import javax.mail.internet.InternetHeaders;
 import javax.mail.internet.MimeMessage;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.text.NumberFormat;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static javax.mail.Folder.HOLDS_FOLDERS;
@@ -149,7 +151,11 @@ public class Runner {
             for (Message msg : messages) {
                 System.out.print("Reading message " + i + "/" + messages.length + "\r");
                 String[] id = msg.getHeader("Message-ID");
-                msgIds.add(join(id));
+                if (id != null) {  //  if Message-ID exists use it as a key
+                    msgIds.add(join(id));
+                } else {            // if doesn't -- calculate MD5 of all header values and use it as a key
+                    msgIds.add(headerMD5(msg.getAllHeaders()));
+                }
                 i++;
             }
 
@@ -158,7 +164,15 @@ public class Runner {
             for (String file : existingFiles) {
                 System.out.print("Restoring message " + i + "/" + existingFiles.size() + "\r");
                 Message msg = new MimeMessage(session, new FileInputStream(diskFolder + "/" + file));
-                if (!msgIds.contains(join(msg.getHeader("Message-ID")))) {
+                String[] id = msg.getHeader("Message-ID");
+                String key;
+                if (id != null) {
+                    key = join(id);
+                } else {
+                    key = headerMD5(msg.getAllHeaders());
+                }
+                // Restore message only if key is missing
+                if (!msgIds.contains(key)) {
                     remote.appendMessages(new Message[]{msg});
                     k++;
                 }
@@ -171,8 +185,22 @@ public class Runner {
         } catch (IOException e) {
             System.out.println(e.getMessage());
         } catch (MessagingException e) {
-            e.printStackTrace();
+            System.out.println(e.getMessage());
+        } catch (NoSuchAlgorithmException e) {
+            System.out.println(e.getMessage());
         }
+    }
+
+    private static String headerMD5(Enumeration allHeaders) throws NoSuchAlgorithmException {
+        MessageDigest m = MessageDigest.getInstance("MD5");
+        String allValues = "";
+        while (allHeaders.hasMoreElements()) {
+            Header header = (Header) allHeaders.nextElement();
+            allValues += header.getValue();
+        }
+
+        byte[] hash = m.digest(allValues.getBytes());
+        return new String(Base64.getEncoder().encode(hash));
     }
 
     private static String join(String[] ids) {
@@ -207,7 +235,7 @@ public class Runner {
         }
     }
 
-    private static void backupFolder(Folder folder) throws Exception {
+    private static void backupFolder(Folder folder) throws MessagingException, IOException {
         if ((folder.getType() & Folder.HOLDS_MESSAGES) != 0 && folder.getMessageCount() > 0 && !folder.getFullName().contentEquals("Calendar")) {  // skip Calendar
             totalMessages += folder.getMessageCount();
             if (!folder.isOpen()) {
@@ -229,9 +257,9 @@ public class Runner {
      *
      * @param folder - remote IMAP folder
      * @throws MessagingException -- IMAP exception
-     * @throws IOException -- file exception
+     * @throws IOException        -- file exception
      */
-    private static void backupMessages(Folder folder) throws MessagingException, IOException {
+    private static void backupMessages(Folder folder) throws IOException, MessagingException {
         UIDFolder uf = (UIDFolder) folder; // cast folder to UIDFolder interface
         String folderPath = "backup/" + conf.getProperty("mailbox.domain") + "/" + conf.getProperty("mailbox.user") + "/" + folder.getFullName() + "/";
         Files.createDirectories(Paths.get(folderPath));
@@ -248,8 +276,8 @@ public class Runner {
         long size = 0L;
         int i = 1;
         for (Message msg : messages) {
-            size = size + msg.getSize();
             try {
+                size = size + msg.getSize();
                 System.out.print("Saving message " + i + "/" + folder.getMessageCount() + "\r");
                 if (!existingFiles.contains(String.valueOf(uf.getUID(msg)))) {
                     File f = new File(folderPath + String.valueOf(uf.getUID(msg)));
@@ -258,6 +286,8 @@ public class Runner {
                     os.close();
                 }
             } catch (IOException e) {
+                System.out.println(e.getMessage());
+            } catch (MessagingException e) {
                 System.out.println(e.getMessage());
             }
             i++;
