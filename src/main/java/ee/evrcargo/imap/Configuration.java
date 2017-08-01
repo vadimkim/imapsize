@@ -24,5 +24,4 @@ public class Configuration extends Properties {
             System.out.println(e.getMessage());
         }
     }
-
 }

@@ -1,7 +1,9 @@
 package ee.evrcargo.imap;
 
+import ee.evrcargo.imap.task.CheckMailbox;
+import ee.evrcargo.imap.task.Task;
+
 import javax.mail.*;
-import javax.mail.internet.InternetHeaders;
 import javax.mail.internet.MimeMessage;
 import java.io.*;
 import java.nio.file.Files;
@@ -25,8 +27,9 @@ public class Runner {
     private static Configuration conf = new Configuration();
     private static Session session = Session.getInstance(conf, null);
     private static Store store;
+    private static Task task;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws MessagingException {
         long startTime = System.currentTimeMillis();
         if (args.length == 0) {
             System.out.println("IMAP mailbox backup/restore util.");
@@ -44,13 +47,14 @@ public class Runner {
             System.out.println("Executing backup for mailbox " + conf.getProperty("mailbox.user") + " to backup/" + conf.getProperty("mailbox.domain") + "/" + conf.getProperty("mailbox.user"));
             backup();
         } else if (args[0].compareTo("-c") == 0) {
-            System.out.println("Checking mailbox " + conf.getProperty("mailbox.user") + " at " + conf.getProperty("mailbox.domain"));
-            check();
+            task = new CheckMailbox();
         } else if (args[0].compareTo("-r") == 0) {
             restore();
         } else {
             System.out.println("Unknown option");
+            System.exit(-1);
         }
+        task.execute();
         System.out.println("Execution time: " + (System.currentTimeMillis() - startTime) / 1000.0 + " sec.");
         System.exit(0);
     }
@@ -223,18 +227,6 @@ public class Runner {
 
     }
 
-    private static void check() {
-        try {
-            System.out.println("Reading folder structure...");
-            dumpFolder(getDefaultFolder(), "");
-            System.out.println("\nTotal messages: " + totalMessages);
-            System.out.println("Total size: " + nf.format(totalSize) + " bytes");
-            store.close();
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
     private static void backupFolder(Folder folder) throws MessagingException, IOException {
         if ((folder.getType() & Folder.HOLDS_MESSAGES) != 0 && folder.getMessageCount() > 0 && !folder.getFullName().contentEquals("Calendar")) {  // skip Calendar
             totalMessages += folder.getMessageCount();
@@ -294,47 +286,5 @@ public class Runner {
         }
         System.out.println();
         totalSize += size;
-    }
-
-    /**
-     * Show information about remote IMAP folder
-     *
-     * @param folder - IMAP folder
-     * @param tab    - indentation
-     * @throws MessagingException -- IMAP exception
-     */
-    private static void dumpFolder(Folder folder, String tab) throws MessagingException {
-        if ((folder.getType() & Folder.HOLDS_MESSAGES) != 0 && folder.getMessageCount() > 0) {
-            System.out.println();
-            System.out.println(tab + "Name:      " + folder.getName());
-            System.out.println(tab + "Full Name: " + folder.getFullName());
-            System.out.println(tab + "URL:       " + folder.getURLName());
-
-            if (!folder.isSubscribed())
-                System.out.println(tab + "Not Subscribed");
-
-            if (folder.hasNewMessages()) System.out.println(tab + "Has New Messages");
-            System.out.println(tab + "Messages:  " + folder.getMessageCount());
-            totalMessages += folder.getMessageCount();
-            if (!folder.isOpen()) {
-                folder.open(Folder.READ_ONLY);
-            }
-            System.out.println(tab + "Messages size:    " + getSize(folder) + " bytes");
-            folder.close(false);
-        }
-
-        // Check if there are any subfolder to explore
-        if ((folder.getType() & HOLDS_FOLDERS) != 0) {
-            Folder[] f = folder.list();
-            for (Folder fld : f) dumpFolder(fld, tab + "    ");
-        }
-    }
-
-    private static String getSize(Folder folder) throws MessagingException {
-        Message[] messages = folder.getMessages();
-        long size = 0L;
-        for (Message msg : messages) size = size + msg.getSize();
-        totalSize += size;
-        return nf.format(size);
     }
 }
