@@ -3,6 +3,7 @@ This software is insipred by http://www.broobles.com/imapsize. It has some key d
 * console application
 * runs on any platform where JRE 1.8 is installed
 * understands UTF-8 IMAP folder names and restores them correctly
+* doesn't have 2Gb limit for folder size
 * understands folder UIDs and makes message backups in original MIME message format
 * ckecks MIME Message-ID or calculates MD5 if Message-ID is missing to avoid message duplicates
 
