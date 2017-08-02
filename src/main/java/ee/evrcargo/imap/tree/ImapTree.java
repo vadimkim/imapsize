@@ -65,7 +65,7 @@ public class ImapTree implements Tree {
     private boolean isFiltered (String name) {
         String[] patterns = conf.getProperty("mailbox.ignored.folders").split(",");
         for (String pattern : patterns) {
-            if (name.contains(pattern.trim())) return true;
+            if (name.equals(pattern.trim())) return true;
         }
         return false;
     }

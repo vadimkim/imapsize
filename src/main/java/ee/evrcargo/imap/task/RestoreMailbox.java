@@ -43,7 +43,7 @@ public class RestoreMailbox implements Task {
                 imapIds = new ArrayList<>();
             } else {
                 retry++;
-                System.out.println("Failed message folder: " + paths.get(pathIdx).getPath() + "file number:" + folderState.getCurrentFile());
+                System.out.println("Failed message folder: " + paths.get(pathIdx).getPath() + " file number:" + folderState.getCurrentFile());
                 System.out.println("Retry " + retry + "/" + maxRetries);
             }
         }
