@@ -33,7 +33,7 @@ public class CheckMailbox implements Task {
                 folderState = new FolderState();
             } else {
                 retry++;
-                System.out.println("Failed message folder: " + paths.get(pathIdx).getPath() + " number:" + folderState.getCurrent());
+                System.out.println("Failed message folder: " + paths.get(pathIdx).getPath() + " number:" + folderState.getCurrentImap());
                 System.out.println("Retry " + retry + "/" + maxRetries);
             }
         }
@@ -42,16 +42,16 @@ public class CheckMailbox implements Task {
         int messageTotal = 0;
         long sizeTotal = 0L;
         for (FolderState state : allStates) {
-            messageTotal += state.getCurrent();
+            messageTotal += state.getCurrentImap();
             sizeTotal += state.getSize();
         }
 
-        System.out.println("NB! Calendar and Contact folders are ignored");
+        System.out.println("NB! Filtered folders are: " + conf.getProperty("mailbox.ignored.folders"));
         System.out.println("Total messages: " + messageTotal);
         System.out.println("Mailbox size: " + nf.format(sizeTotal) + " bytes");
     }
 
-    private boolean getFolderInfo(FolderPath path, FolderState folderState) {
+    private boolean getFolderInfo(FolderPath path, FolderState state) {
         Session session = Session.getInstance(conf, null);
         try {
             Store store = session.getStore();
@@ -68,13 +68,13 @@ public class CheckMailbox implements Task {
 
             Message[] messages = folder.getMessages();
             int totalMessages = folder.getMessageCount();
-            for (int i = folderState.getCurrent(); i < totalMessages; i++) {
+            for (int i = state.getCurrentImap(); i < totalMessages; i++) {
                 System.out.print("Reading message " + (i + 1) + "/" + totalMessages + "\r");
-                folderState.setSize(folderState.getSize() + messages[i].getSize());
-                folderState.setCurrent(i + 1);
+                state.setSize(state.getSize() + messages[i].getSize());
+                state.setCurrentImap(i + 1);
             }
 
-            System.out.println(String.join("", Collections.nCopies(path.getDepth(), tab)) + "Size:  " + nf.format(folderState.getSize()) + " bytes");
+            System.out.println(String.join("", Collections.nCopies(path.getDepth(), tab)) + "Size:  " + nf.format(state.getSize()) + " bytes");
             store.close();
             return true;
         } catch (MessagingException e) {

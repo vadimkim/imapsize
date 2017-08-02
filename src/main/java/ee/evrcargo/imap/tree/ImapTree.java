@@ -14,7 +14,6 @@ import java.util.List;
 import static javax.mail.Folder.HOLDS_FOLDERS;
 
 public class ImapTree implements Tree {
-    private final String tab = "  ";
     private Configuration conf;
     private Store store;
     private List<FolderPath> mailboxMap = new ArrayList<>();
@@ -38,9 +37,10 @@ public class ImapTree implements Tree {
 
     private void dumpFolder(Folder folder, int depth) throws MessagingException {
         if ((folder.getType() & Folder.HOLDS_MESSAGES) != 0 && folder.getMessageCount() > 0) {
-            FolderPath fp = new FolderPath(folder.getFullName(), depth, folder.getMessageCount());
+            FolderPath fp = new FolderPath(folder.getFullName(), depth);
+            String tab = "  ";
             System.out.println(String.join("",Collections.nCopies(depth, tab)) + folder.getFullName());
-            if (!folder.getFullName().contains("Calendar") && !folder.getFullName().contains("Contacts")) mailboxMap.add(fp);  // Filter "Calendar"  and "Contact" folder
+            if (!isFiltered(fp.getPath())) mailboxMap.add(fp);  // Filter folders specified at configuration
         }
 
         // Check if there are any subfolder to explore
@@ -60,5 +60,13 @@ public class ImapTree implements Tree {
             System.out.println(e.getMessage());
         }
         return null;
+    }
+
+    private boolean isFiltered (String name) {
+        String[] patterns = conf.getProperty("mailbox.ignored.folders").split(",");
+        for (String pattern : patterns) {
+            if (name.contains(pattern.trim())) return true;
+        }
+        return false;
     }
 }

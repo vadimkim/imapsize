@@ -2,7 +2,8 @@ package ee.evrcargo.imap.tree;
 
 public class FolderState {
     private long size = 0L;
-    private int current;
+    private int currentImap;
+    private int currentFile;
 
     public long getSize() {
         return size;
@@ -12,11 +13,19 @@ public class FolderState {
         this.size = size;
     }
 
-    public int getCurrent() {
-        return current;
+    public int getCurrentImap() {
+        return currentImap;
     }
 
-    public void setCurrent(int current) {
-        this.current = current;
+    public void setCurrentImap(int currentImap) {
+        this.currentImap = currentImap;
+    }
+
+    public int getCurrentFile() {
+        return currentFile;
+    }
+
+    public void setCurrentFile(int currentFile) {
+        this.currentFile = currentFile;
     }
 }

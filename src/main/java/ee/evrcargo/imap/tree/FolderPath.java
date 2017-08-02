@@ -3,12 +3,10 @@ package ee.evrcargo.imap.tree;
 public class FolderPath {
     String path;
     int depth;
-    int msgCount;
 
-    public FolderPath(String path, int depth, int msgCount) {
+    public FolderPath(String path, int depth) {
         this.path = path;
         this.depth = depth;
-        this.msgCount = msgCount;
     }
 
     public String getPath() {
@@ -19,7 +17,4 @@ public class FolderPath {
         return depth;
     }
 
-    public int getMsgCount() {
-        return msgCount;
-    }
 }

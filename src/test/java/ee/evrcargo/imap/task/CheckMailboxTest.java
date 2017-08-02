@@ -1,38 +1,39 @@
 package ee.evrcargo.imap.task;
 
-import ee.evrcargo.imap.Configuration;
-import ee.evrcargo.imap.tree.FolderPath;
-import ee.evrcargo.imap.tree.ImapTree;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
-
-import javax.mail.Session;
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import javax.mail.*;
+import javax.mail.internet.MimeMessage;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.util.Properties;
 
 public class CheckMailboxTest {
     @Test
-    public void execute() throws Exception {
+    public void execute() {
         // Init objects
-        List<FolderPath> paths = new ArrayList();
-        paths.add(new FolderPath("INBOX", 1, 10));
-        paths.add(new FolderPath("INBOX/Test", 2, 20));
-        Session session = mock(Session.class);
-        Configuration conf = mock(Configuration.class);
-        when(conf.getProperty("mailbox.retry.count")).thenReturn("10");
-        when(Session.getInstance(conf,null)).thenReturn(session);
-        ImapTree tree = mock(ImapTree.class);
-        when(tree.build()).thenReturn(paths);
+        Properties conf  = new Properties();
+        conf.setProperty("mail.host", "outlook.office365.com");
+        conf.setProperty("mail.store.protocol", "imaps");
+        conf.setProperty("mail.imap.partialfetch", "false");
+        conf.setProperty("mail.debug", "true");
+        conf.setProperty("mailbox.user", "");
+        conf.setProperty("mailbox.password", "");
+        try {
+            Session session = Session.getInstance(conf, null);
+            Store store = session.getStore();
+            store.connect(conf.getProperty("mailbox.user"), conf.getProperty("mailbox.password"));
+            Folder folder = store.getFolder("INBOX");
+            folder.open(Folder.READ_WRITE);
 
-        // Call method
-        Task checkMailbox = new CheckMailbox();
-        checkMailbox.execute();
-        System.out.println("Done");
+            Message msg = new MimeMessage(session, new FileInputStream("111"));
+            folder.appendMessages(new Message[] {msg});
+
+        } catch (MessagingException e) {
+            System.out.println(e.getMessage());
+        } catch (FileNotFoundException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
 }
