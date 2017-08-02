@@ -1,10 +1,12 @@
 # imapsize
-This software is insipred by http://www.broobles.com/imapsize. It has some key differences from the original:
+This software is insipred by http://www.broobles.com/imapsize. Imapsize is able to check IMAP mailbox folder structure and calculate the size, backup mailbox using IMAP protocol and restore mailbox to any IMAP server.
+
+Imapsize has some key differences from the original:
 * console application
 * runs on any platform where JRE 1.8 is installed
 * understands UTF-8 IMAP folder names and restores them correctly
-* doesn't have 2Gb limit for folder size
-* understands folder UIDs and makes message backups in original MIME message format
+* doesn't have 2Gb limit for the folder size
+* understands folder UIDs and makes message backups using original MIME message format
 * ckecks MIME Message-ID or calculates MD5 if Message-ID is missing to avoid message duplicates
 
 # Dependencies
