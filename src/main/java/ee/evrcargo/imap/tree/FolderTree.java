@@ -40,7 +40,7 @@ public class FolderTree implements Tree {
             List<String> existFolders = Files.walk(Paths.get(diskFolder), 1)
                     .skip(1L)
                     .filter(Files::isDirectory)
-                    .filter(p -> !folderFilters.equals(p.toFile().getName())) // Filter ignored folders
+                    .filter(p -> !folderFilters.contains(p.toFile().getName().trim())) // Filter ignored folders
                     .map(Path::toFile)
                     .map(File::getName)
                     .collect(Collectors.toList());
