@@ -65,7 +65,7 @@ public class RestoreMailbox implements Task {
             Store store = session.getStore();
             store.connect(conf.getProperty("mailbox.user"), conf.getProperty("mailbox.password"));
             Folder remote = store.getFolder(path.getPath());
-            System.out.println("Reading remote folder: " + remote.getName() + "...");
+            System.out.println("Reading remote folder: " + remote.getFullName() + "...");
             if (!remote.exists()) {
                 System.out.println("Creating new folder at remote: " + remote.getFullName());
                 remote.create(Folder.HOLDS_FOLDERS + Folder.HOLDS_MESSAGES);
