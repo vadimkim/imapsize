@@ -8,6 +8,7 @@ Imapsize has some key differences from the original:
 * doesn't have 2Gb limit for the folder size
 * understands folder UIDs and makes message backups using original MIME message format
 * ckecks MIME Message-ID or calculates MD5 if Message-ID is missing to avoid message duplicates
+* user can define which folders to backup/restore by making filters. Default filter is applied to Calendar, Contacts and Deleteted Items
 
 # Dependencies
 * JAVA JDK 1.8+
