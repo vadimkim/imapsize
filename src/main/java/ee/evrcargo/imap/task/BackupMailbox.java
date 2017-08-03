@@ -42,7 +42,6 @@ public class BackupMailbox implements Task {
                 folderState = new FolderState();
             } else {
                 retry++;
-                System.out.println("Failed message folder: " + paths.get(pathIdx).getPath() + " number:" + folderState.getCurrentImap());
                 System.out.println("Retry " + retry + "/" + maxRetries);
             }
         }
@@ -98,8 +97,9 @@ public class BackupMailbox implements Task {
 
             store.close();
             return true;
-        } catch (MessagingException | IOException e) {
+        } catch (Exception e) {
             System.out.println(e.getMessage());
+            System.out.println("Failed message folder: " + path.getPath() + " number:" + state.getCurrentImap());
             return false;
         }
     }
