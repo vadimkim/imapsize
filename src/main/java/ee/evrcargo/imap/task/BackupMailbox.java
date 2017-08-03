@@ -6,28 +6,37 @@ import ee.evrcargo.imap.tree.FolderState;
 import ee.evrcargo.imap.tree.ImapTree;
 
 import javax.mail.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.NumberFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
-public class CheckMailbox implements Task {
+public class BackupMailbox implements Task {
     private static NumberFormat nf = NumberFormat.getNumberInstance();
-    private Configuration conf = new Configuration();
+    Configuration conf = new Configuration();
     private final int maxRetries = Integer.parseInt(conf.getProperty("mailbox.retry.count"));
 
     @Override
     public void execute() throws MessagingException {
-        System.out.println("Checking mailbox " + conf.getProperty("mailbox.user") + " at " + conf.getProperty("mailbox.domain"));
+        System.out.println("Executing backup for mailbox " + conf.getProperty("mailbox.user") + " to backup/" + conf.getProperty("mailbox.domain") + "/" + conf.getProperty("mailbox.user"));
         ImapTree tree = new ImapTree(conf);
         List<FolderPath> paths = tree.build();
 
         // Crawl the folders
-        System.out.println("\n                  Checking size of the folders...");
+        System.out.println("\n                  Backing up the folders...");
         int retry = 0;
         int pathIdx = 0;
         FolderState folderState = new FolderState();
         List<FolderState> allStates = new ArrayList<>();
         while (retry < maxRetries && pathIdx < paths.size()) {
-            if (getFolderInfo(paths.get(pathIdx), folderState)) {
+            if (backupFolder(paths.get(pathIdx), folderState)) {
                 allStates.add(folderState);
                 pathIdx++;
                 folderState = new FolderState();
@@ -51,34 +60,46 @@ public class CheckMailbox implements Task {
         System.out.println("Mailbox size: " + nf.format(sizeTotal) + " bytes");
     }
 
-    private boolean getFolderInfo(FolderPath path, FolderState state) {
+    private boolean backupFolder(FolderPath path, FolderState state) {
         Session session = Session.getInstance(conf, null);
         try {
             Store store = session.getStore();
             store.connect(conf.getProperty("mailbox.user"), conf.getProperty("mailbox.password"));
             Folder folder = store.getFolder(path.getPath());
+            UIDFolder uf = (UIDFolder) folder; // cast folder to UIDFolder interface
             if (!folder.isOpen()) {
                 folder.open(Folder.READ_ONLY);
             }
-            System.out.println();
-            String tab = "  ";
-            System.out.println(String.join("", Collections.nCopies(path.getDepth(), tab)) + "Full Name: " + folder.getFullName());
-            System.out.println(String.join("", Collections.nCopies(path.getDepth(), tab)) + "URL:       " + folder.getURLName());
-            System.out.println(String.join("", Collections.nCopies(path.getDepth(), tab)) + "Messages:  " + folder.getMessageCount());
+
+            String folderPath = "backup/" + conf.getProperty("mailbox.domain") + "/" + conf.getProperty("mailbox.user") + "/" + folder.getFullName() + "/";
+            Files.createDirectories(Paths.get(folderPath));
+            System.out.println("Saving folder: " + folder.getFullName());
+
+            // Create list of the existing files to remove them from synchronization
+            List<String> existingFiles = Files.walk(Paths.get(folderPath), 1)
+                    .filter(Files::isRegularFile)
+                    .map(Path::toFile)
+                    .map(File::getName)
+                    .collect(Collectors.toList());
 
             Message[] messages = folder.getMessages();
-            int totalMessages = folder.getMessageCount();
-            for (int i = state.getCurrentImap(); i < totalMessages; i++) {
-                System.out.print("Reading message " + (i + 1) + "/" + totalMessages + "\r");
+            for (int i = state.getCurrentImap(); i < folder.getMessageCount(); i++) {
+                System.out.print("Saving message " + (i + 1) + "/" + folder.getMessageCount() + "\r");
                 state.setSize(state.getSize() + messages[i].getSize());
-                state.setCurrentImap(i + 1);
+                state.setCurrentImap(i);
+                if (!existingFiles.contains(String.valueOf(uf.getUID(messages[i])))) {
+                    File f = new File(folderPath + String.valueOf(uf.getUID(messages[i])));
+                    OutputStream os = new FileOutputStream(f);
+                    messages[i].writeTo(os);
+                    os.close();
+                }
             }
+            System.out.println();
 
-            System.out.println(String.join("", Collections.nCopies(path.getDepth(), tab)) + "Size:  " + nf.format(state.getSize()) + " bytes");
             store.close();
             return true;
-        } catch (MessagingException e) {
-            e.printStackTrace();
+        } catch (MessagingException | IOException e) {
+            System.out.println(e.getMessage());
             return false;
         }
     }
