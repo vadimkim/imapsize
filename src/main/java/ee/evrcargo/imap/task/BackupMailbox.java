@@ -99,7 +99,7 @@ public class BackupMailbox implements Task {
             return true;
         } catch (Exception e) {
             System.out.println(e.getMessage());
-            System.out.println("Failed message folder: " + path.getPath() + " number:" + state.getCurrentImap());
+            System.out.println("\nFailed message folder: " + path.getPath() + " number:" + state.getCurrentImap());
             return false;
         }
     }
