@@ -57,14 +57,14 @@ public class FolderTree implements Tree {
                 if (base.length() == 0) {
                     fp = new FolderPath(existFolders.get(i), depth);
                 } else {
-                    fp = new FolderPath(base.substring(1) + "/" + existFolders.get(i), depth);
+                    fp = new FolderPath(base.substring(1) + File.separator + existFolders.get(i), depth);
                 }
                 mailboxMap.add(fp);
             }
 
             if (existFolders.size() > 0) {
                 for (String folder : existFolders) {
-                    dumpFolder(diskFolder + "/" + folder, depth + 1);
+                    dumpFolder(diskFolder + File.separator + folder, depth + 1);
                 }
             }
 

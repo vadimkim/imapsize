@@ -24,9 +24,19 @@ import java.util.stream.Collectors;
 public class RestoreMailbox implements Task {
     private Configuration conf = new Configuration();
     private final int maxRetries = Integer.parseInt(conf.getProperty("mailbox.retry.count"));
+    private Session session = null;
+    private Store store = null;
+    private char separator;
 
     @Override
     public void execute() throws MessagingException {
+        // Create IMAP session
+        session = Session.getInstance(conf, null);
+        store = session.getStore();
+        store.connect(conf.getProperty("mailbox.user"), conf.getProperty("mailbox.password"));
+        separator = store.getDefaultFolder().getSeparator();
+
+        // Generate disk folder tree
         FolderTree tree = new FolderTree(conf);
         List<FolderPath> paths = tree.build();
 
@@ -51,8 +61,7 @@ public class RestoreMailbox implements Task {
     }
 
     private boolean restoreFolder(FolderPath path, FolderState state, List<String> imapIds) {
-        Session session = Session.getInstance(conf, null);
-        String diskFolder = conf.getProperty("mailbox.restore.base") + "/" + path.getPath();
+        String diskFolder = conf.getProperty("mailbox.restore.base") + File.separator + path.getPath();
         try {
             // Create list of files at backup location
             List<String> existingFiles = Files.walk(Paths.get(diskFolder), 1)
@@ -62,9 +71,8 @@ public class RestoreMailbox implements Task {
                     .collect(Collectors.toList());
 
             // Connect to remote folder
-            Store store = session.getStore();
-            store.connect(conf.getProperty("mailbox.user"), conf.getProperty("mailbox.password"));
-            Folder remote = store.getFolder(path.getPath());
+            System.out.println("Remote path:" + path.getPath());
+            Folder remote = store.getFolder(path.getPath().replace(File.separator, String.valueOf(separator)));
             System.out.println("Reading remote folder: " + remote.getFullName() + "...");
             if (!remote.exists()) {
                 System.out.println("Creating new folder at remote: " + remote.getFullName());

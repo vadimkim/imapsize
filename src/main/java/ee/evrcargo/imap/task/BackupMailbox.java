@@ -30,7 +30,7 @@ public class BackupMailbox implements Task {
         List<FolderPath> paths = tree.build();
 
         // Crawl the folders
-        System.out.println("\n                  Backing up the folders...");
+        System.out.println("\n                  Backing up the folders... \n");
         int retry = 0;
         int pathIdx = 0;
         FolderState folderState = new FolderState();
