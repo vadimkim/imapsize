@@ -18,3 +18,9 @@ Imapsize has some key differences from the original:
 ./run.cmd      --- to run and show menu
 
 NB! before running the program edit build/resources/main/mbox.properties file to describe your IMAP account configuration
+
+# Coverity scan result
+<a href="https://scan.coverity.com/projects/evrcargo-imapsize">
+  <img alt="Coverity Scan Build Status"
+       src="https://scan.coverity.com/projects/14799/badge.svg"/>
+</a>
