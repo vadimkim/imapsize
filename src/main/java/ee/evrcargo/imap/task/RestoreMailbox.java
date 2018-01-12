@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -132,7 +133,7 @@ public class RestoreMailbox implements Task {
             allValues.append(header.getValue());
         }
 
-        byte[] hash = m.digest(allValues.toString().getBytes());
+        byte[] hash = m.digest(allValues.toString().getBytes(Charset.forName("UTF-8")));
         return new String(Base64.getEncoder().encode(hash));
     }
 
