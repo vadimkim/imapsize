@@ -10,6 +10,7 @@ import javax.mail.Store;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import static javax.mail.Folder.HOLDS_FOLDERS;
 
@@ -26,7 +27,8 @@ public class ImapTree implements Tree {
     public List<FolderPath> build() {
         try {
             System.out.println("Reading IMAP folder structure...");
-            dumpFolder(getDefaultFolder(), 0);
+            Optional<Folder> initFolder = Optional.ofNullable(getDefaultFolder());
+            if (initFolder.isPresent()) dumpFolder(initFolder.get(), 0);
             store.close();
 
         } catch (MessagingException e) {

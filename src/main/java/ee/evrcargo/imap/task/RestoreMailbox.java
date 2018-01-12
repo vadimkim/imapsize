@@ -10,6 +10,7 @@ import javax.mail.internet.MimeMessage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -98,7 +99,8 @@ public class RestoreMailbox implements Task {
             int k = 0;
             for (int i = state.getCurrentFile(); i < existingFiles.size(); i++) {
                 System.out.print("Restoring message " + (i + 1) + "/" + existingFiles.size() + "\r");
-                Message msg = new MimeMessage(session, new FileInputStream(diskFolder + "/" + existingFiles.get(i)));
+                InputStream is = new FileInputStream(diskFolder + "/" + existingFiles.get(i));
+                Message msg = new MimeMessage(session, is);
                 String[] id = msg.getHeader("Message-ID");
                 String key;
                 if (id != null) {
@@ -111,6 +113,7 @@ public class RestoreMailbox implements Task {
                     remote.appendMessages(new Message[]{msg});
                     k++;
                 }
+                is.close();
                 state.setCurrentFile(i);
             }
             System.out.println();

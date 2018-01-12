@@ -25,6 +25,7 @@ public class Configuration extends Properties {
                 input = new FileInputStream(new File(path));
             }
             this.load(new InputStreamReader(input, Charset.forName("UTF-8")));
+            input.close();
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
