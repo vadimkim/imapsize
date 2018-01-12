@@ -24,23 +24,24 @@ public class Configuration {
 
     private Configuration() {
         super();
+        FileInputStream input = null;
         try {
             Optional<URL> resource = Optional.ofNullable(Configuration.class.getResource("."));
             if (!resource.isPresent()) {
-                FileInputStream input = new FileInputStream(new File("build/resources/main/mbox.properties"));
+                input = new FileInputStream(new File("build/resources/main/mbox.properties"));
                 this.props.load(new InputStreamReader(input, Charset.forName("UTF-8")));
                 input.close();
             } else {
                 // To run under IntelliJ  IDE
                 String path = resource.get().getPath().split("out/production/")[0] + "out/production/resources/mbox.properties";
-                FileInputStream input = new FileInputStream(new File(path));
+                input = new FileInputStream(new File(path));
                 this.props.load(new InputStreamReader(input, Charset.forName("UTF-8")));
                 input.close();
             }
         } catch (IOException e) {
             System.out.println(e.getMessage());
-            System.out.println("mbox.properties can't be loaded! Exiting...");
-            System.exit(-1);
+        } finally {
+            try { if (input != null) input.close(); } catch (IOException e) { e.printStackTrace(); }
         }
     }
 
