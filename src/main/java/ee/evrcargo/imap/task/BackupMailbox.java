@@ -16,17 +16,18 @@ import java.nio.file.Paths;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.stream.Collectors;
 
 public class BackupMailbox implements Task {
     private static NumberFormat nf = NumberFormat.getNumberInstance();
-    Configuration conf = new Configuration();
+    Properties conf = Configuration.getInstance().getProps();
     private final int maxRetries = Integer.parseInt(conf.getProperty("mailbox.retry.count"));
 
     @Override
     public void execute() throws MessagingException {
         System.out.println("Executing backup for mailbox " + conf.getProperty("mailbox.user") + " to backup/" + conf.getProperty("mailbox.domain") + "/" + conf.getProperty("mailbox.user"));
-        ImapTree tree = new ImapTree(conf);
+        ImapTree tree = new ImapTree();
         List<FolderPath> paths = tree.build();
 
         // Crawl the folders

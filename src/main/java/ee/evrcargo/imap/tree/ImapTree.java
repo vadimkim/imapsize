@@ -7,21 +7,14 @@ import javax.mail.MessagingException;
 import javax.mail.Session;
 import javax.mail.Store;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static javax.mail.Folder.HOLDS_FOLDERS;
 
 public class ImapTree implements Tree {
-    private Configuration conf;
+    private Properties conf = Configuration.getInstance().getProps();
     private Store store;
     private List<FolderPath> mailboxMap = new ArrayList<>();
-
-    public ImapTree(Configuration conf) {
-        this.conf = conf;
-    }
 
     @Override
     public List<FolderPath> build() {

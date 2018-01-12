@@ -11,13 +11,13 @@ import java.util.*;
 
 public class CheckMailbox implements Task {
     private static NumberFormat nf = NumberFormat.getNumberInstance();
-    private Configuration conf = new Configuration();
+    private Properties conf = Configuration.getInstance().getProps();
     private final int maxRetries = Integer.parseInt(conf.getProperty("mailbox.retry.count"));
 
     @Override
     public void execute() throws MessagingException {
         System.out.println("Checking mailbox " + conf.getProperty("mailbox.user") + " at " + conf.getProperty("mailbox.domain"));
-        ImapTree tree = new ImapTree(conf);
+        ImapTree tree = new ImapTree();
         List<FolderPath> paths = tree.build();
 
         // Crawl the folders

@@ -16,14 +16,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Enumeration;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class RestoreMailbox implements Task {
-    private Configuration conf = new Configuration();
+    private Properties conf = Configuration.getInstance().getProps();
     private final int maxRetries = Integer.parseInt(conf.getProperty("mailbox.retry.count"));
     private Session session = null;
     private Store store = null;
@@ -38,7 +35,7 @@ public class RestoreMailbox implements Task {
         separator = store.getDefaultFolder().getSeparator();
 
         // Generate disk folder tree
-        FolderTree tree = new FolderTree(conf);
+        FolderTree tree = new FolderTree();
         List<FolderPath> paths = tree.build();
 
         // Crawl the folders
