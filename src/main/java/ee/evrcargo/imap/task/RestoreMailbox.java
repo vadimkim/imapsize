@@ -28,12 +28,18 @@ public class RestoreMailbox implements Task {
     private char separator;
 
     @Override
-    public void execute() throws MessagingException {
+    public void execute() {
         // Create IMAP session
         session = Session.getInstance(conf, null);
-        store = session.getStore();
-        store.connect(conf.getProperty("mailbox.user"), conf.getProperty("mailbox.password"));
-        separator = store.getDefaultFolder().getSeparator();
+        try {
+            store = session.getStore();
+            store.connect(conf.getProperty("mailbox.user"), conf.getProperty("mailbox.password"));
+            separator = store.getDefaultFolder().getSeparator();
+        } catch (MessagingException e) {
+            System.out.println(e.getMessage());
+            System.out.println("Can't connect to IMAP server! Exiting...");
+            return;
+        }
 
         // Generate disk folder tree
         FolderTree tree = new FolderTree();
@@ -61,6 +67,7 @@ public class RestoreMailbox implements Task {
 
     private boolean restoreFolder(FolderPath path, FolderState state, List<String> imapIds) {
         String diskFolder = conf.getProperty("mailbox.restore.base") + File.separator + path.getPath();
+        InputStream is = null;
         try {
             // Create list of files at backup location
             List<String> existingFiles = Files.walk(Paths.get(diskFolder), 1)
@@ -97,7 +104,7 @@ public class RestoreMailbox implements Task {
             int k = 0;
             for (int i = state.getCurrentFile(); i < existingFiles.size(); i++) {
                 System.out.print("Restoring message " + (i + 1) + "/" + existingFiles.size() + "\r");
-                InputStream is = new FileInputStream(diskFolder + "/" + existingFiles.get(i));
+                is = new FileInputStream(diskFolder + "/" + existingFiles.get(i));
                 Message msg = new MimeMessage(session, is);
                 String[] id = msg.getHeader("Message-ID");
                 String key;
@@ -122,6 +129,8 @@ public class RestoreMailbox implements Task {
         } catch (MessagingException | IOException | NoSuchAlgorithmException e) {
             System.out.println(e.getMessage());
             return false;
+        } finally {
+            try { if (is != null) is.close(); } catch (IOException e) { e.printStackTrace(); }
         }
     }
 

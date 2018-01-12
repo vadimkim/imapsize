@@ -25,7 +25,7 @@ public class BackupMailbox implements Task {
     private final int maxRetries = Integer.parseInt(conf.getProperty("mailbox.retry.count"));
 
     @Override
-    public void execute() throws MessagingException {
+    public void execute() {
         System.out.println("Executing backup for mailbox " + conf.getProperty("mailbox.user") + " to backup/" + conf.getProperty("mailbox.domain") + "/" + conf.getProperty("mailbox.user"));
         ImapTree tree = new ImapTree();
         List<FolderPath> paths = tree.build();
@@ -62,8 +62,9 @@ public class BackupMailbox implements Task {
 
     private boolean backupFolder(FolderPath path, FolderState state) {
         Session session = Session.getInstance(conf, null);
+        Store store = null;
         try {
-            Store store = session.getStore();
+            store = session.getStore();
             store.connect(conf.getProperty("mailbox.user"), conf.getProperty("mailbox.password"));
             Folder folder = store.getFolder(path.getPath());
             UIDFolder uf = (UIDFolder) folder; // cast folder to UIDFolder interface
@@ -102,6 +103,8 @@ public class BackupMailbox implements Task {
             System.out.println(e.getMessage());
             System.out.println("\nFailed message folder: " + path.getPath() + " number:" + state.getCurrentImap());
             return false;
+        } finally {
+            try { if (store != null) store.close(); } catch (MessagingException e) { e.printStackTrace(); }
         }
     }
 }

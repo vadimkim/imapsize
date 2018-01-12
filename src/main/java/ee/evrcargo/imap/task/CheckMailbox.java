@@ -15,7 +15,7 @@ public class CheckMailbox implements Task {
     private final int maxRetries = Integer.parseInt(conf.getProperty("mailbox.retry.count"));
 
     @Override
-    public void execute() throws MessagingException {
+    public void execute() {
         System.out.println("Checking mailbox " + conf.getProperty("mailbox.user") + " at " + conf.getProperty("mailbox.domain"));
         ImapTree tree = new ImapTree();
         List<FolderPath> paths = tree.build();
@@ -53,8 +53,9 @@ public class CheckMailbox implements Task {
 
     private boolean getFolderInfo(FolderPath path, FolderState state) {
         Session session = Session.getInstance(conf, null);
+        Store store = null;
         try {
-            Store store = session.getStore();
+            store = session.getStore();
             store.connect(conf.getProperty("mailbox.user"), conf.getProperty("mailbox.password"));
             Folder folder = store.getFolder(path.getPath());
             if (!folder.isOpen()) {
@@ -80,6 +81,8 @@ public class CheckMailbox implements Task {
         } catch (MessagingException e) {
             e.printStackTrace();
             return false;
+        } finally {
+            try { if (store != null) store.close(); } catch (MessagingException e) { e.printStackTrace(); }
         }
     }
 }
