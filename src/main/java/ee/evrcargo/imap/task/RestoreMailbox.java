@@ -21,11 +21,16 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class RestoreMailbox implements Task {
-    private Properties conf = Configuration.getInstance().getProps();
-    private final int maxRetries = Integer.parseInt(conf.getProperty("mailbox.retry.count"));
+    private final Properties conf;
+    private final int maxRetries;
     private Session session = null;
     private Store store = null;
     private char separator;
+
+    public RestoreMailbox(String config) {
+        conf = Configuration.getInstance().getProps(config);
+        maxRetries = Integer.parseInt(conf.getProperty("mailbox.retry.count"));
+    }
 
     @Override
     public void execute() {
@@ -42,7 +47,7 @@ public class RestoreMailbox implements Task {
         }
 
         // Generate disk folder tree
-        FolderTree tree = new FolderTree();
+        FolderTree tree = new FolderTree(conf);
         List<FolderPath> paths = tree.build();
 
         // Crawl the folders

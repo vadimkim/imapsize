@@ -21,13 +21,18 @@ import java.util.stream.Collectors;
 
 public class BackupMailbox implements Task {
     private static NumberFormat nf = NumberFormat.getNumberInstance();
-    Properties conf = Configuration.getInstance().getProps();
-    private final int maxRetries = Integer.parseInt(conf.getProperty("mailbox.retry.count"));
+    private final Properties conf;
+    private final int maxRetries;
+
+    public BackupMailbox(String config) {
+        conf = Configuration.getInstance().getProps(config);
+        maxRetries = Integer.parseInt(conf.getProperty("mailbox.retry.count"));
+    }
 
     @Override
     public void execute() {
         System.out.println("Executing backup for mailbox " + conf.getProperty("mailbox.user") + " to backup/" + conf.getProperty("mailbox.domain") + "/" + conf.getProperty("mailbox.user"));
-        ImapTree tree = new ImapTree();
+        ImapTree tree = new ImapTree(conf);
         List<FolderPath> paths = tree.build();
 
         // Crawl the folders

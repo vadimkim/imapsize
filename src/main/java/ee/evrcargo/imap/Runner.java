@@ -26,17 +26,34 @@ public class Runner {
             System.out.println("-c  check mailbox structure and calculate size");
             System.out.println("-r  restore mailbox");
             System.out.println();
+            System.out.println("--config <filename> Path to mbox.properties file");
+            System.out.println();
             System.out.println("Example: run.sh -c");
             System.exit(0);
-        } else if (args[0].compareTo("-b") == 0) {
-            task = new BackupMailbox();
-        } else if (args[0].compareTo("-c") == 0) {
-            task = new CheckMailbox();
-        } else if (args[0].compareTo("-r") == 0) {
-            task = new RestoreMailbox();
-        } else {
-            System.out.println("Unknown option");
-            System.exit(-1);
+        }
+        String config = null;
+        for (int i = 0; i < args.length; i++) {
+            switch (args[i]) {
+                case "-b":
+                    task = new BackupMailbox(config);
+                    break;
+                case "-c":
+                    task = new CheckMailbox(config);
+                    break;
+                case "-r":
+                    task = new RestoreMailbox(config);
+                    break;
+                case "--config":
+                    if (i == args.length-1) {
+                        System.out.println("Missing config file");
+                        System.exit(-1);
+                    }
+                    config = args[++i];
+                    break;
+                default:
+                    System.out.println("Unknown option");
+                    System.exit(-1);
+            }
         }
         task.execute();
         System.out.println("Execution time: " + (System.currentTimeMillis() - startTime) / 1000.0 + " sec.");

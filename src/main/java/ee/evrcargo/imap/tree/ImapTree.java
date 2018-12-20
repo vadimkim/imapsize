@@ -1,7 +1,5 @@
 package ee.evrcargo.imap.tree;
 
-import ee.evrcargo.imap.Configuration;
-
 import javax.mail.Folder;
 import javax.mail.MessagingException;
 import javax.mail.Session;
@@ -12,9 +10,13 @@ import java.util.*;
 import static javax.mail.Folder.HOLDS_FOLDERS;
 
 public class ImapTree implements Tree {
-    private Properties conf = Configuration.getInstance().getProps();
+    private final Properties conf;
     private Store store;
     private List<FolderPath> mailboxMap = new ArrayList<>();
+
+    public ImapTree(Properties conf) {
+        this.conf = conf;
+    }
 
     @Override
     public List<FolderPath> build() {

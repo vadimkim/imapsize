@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Optional;
 import java.util.Properties;
 
@@ -14,7 +16,7 @@ import java.util.Properties;
  */
 public class Configuration {
 
-    private Properties props = new Properties();
+    private HashMap<String, Properties> props = new HashMap<String, Properties>();
 
     private static final Configuration instance = new Configuration();
 
@@ -23,29 +25,42 @@ public class Configuration {
     }
 
     private Configuration() {
-        super();
-        FileInputStream input = null;
-        try {
-            Optional<URL> resource = Optional.ofNullable(Configuration.class.getResource("."));
-            if (!resource.isPresent()) {
-                input = new FileInputStream(new File("build/resources/main/mbox.properties"));
-                this.props.load(new InputStreamReader(input, Charset.forName("UTF-8")));
-                input.close();
-            } else {
-                // To run under IntelliJ  IDE
-                String path = resource.get().getPath().split("out/production/")[0] + "out/production/resources/mbox.properties";
-                input = new FileInputStream(new File(path));
-                this.props.load(new InputStreamReader(input, Charset.forName("UTF-8")));
-                input.close();
-            }
-        } catch (IOException e) {
-            System.out.println(e.getMessage());
-        } finally {
-            try { if (input != null) input.close(); } catch (IOException e) { e.printStackTrace(); }
-        }
     }
 
-    public Properties getProps() {
+    /**
+     * @param filename mbox.properties file to load, or <code>null</code> to load the default file
+     * @return
+     */
+    public Properties getProps(String filename) {
+        if (this.props.containsKey(filename))
+            return this.props.get(filename);
+
+        Properties props = new Properties();
+        try {
+            if (filename != null) {
+                try (FileInputStream input = new FileInputStream(new File(filename))) {
+                    props.load(new InputStreamReader(input, StandardCharsets.UTF_8));
+                }
+            } else {
+                Optional<URL> resource = Optional.ofNullable(Configuration.class.getResource("."));
+                if (!resource.isPresent()) {
+                    try (FileInputStream input = new FileInputStream(new File("build/resources/main/mbox.properties"))) {
+                        props.load(new InputStreamReader(input, StandardCharsets.UTF_8));
+                    }
+                } else {
+                    // To run under IntelliJ  IDE
+                    String path = resource.get().getPath().split("out/production/")[0] + "out/production/resources/mbox.properties";
+                    try (FileInputStream input = new FileInputStream(new File(path))) {
+                        props.load(new InputStreamReader(input, StandardCharsets.UTF_8));
+                    }
+                }
+            }
+        } catch (IOException e) {
+            System.err.println(e.getMessage());
+        }
+
+        this.props.put(filename, props);
+
         return props;
     }
 }
