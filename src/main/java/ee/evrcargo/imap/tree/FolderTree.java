@@ -1,7 +1,5 @@
 package ee.evrcargo.imap.tree;
 
-import ee.evrcargo.imap.Configuration;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -15,7 +13,12 @@ import java.util.stream.Collectors;
 
 public class FolderTree implements Tree {
     private List<FolderPath> mailboxMap = new ArrayList<>();
-    private Properties conf = Configuration.getInstance().getProps();
+    private final Properties conf;
+
+    public FolderTree(Properties conf) {
+        this.conf = conf;
+    }
+
 
     @Override
     public List<FolderPath> build() {
