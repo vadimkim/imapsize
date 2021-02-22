@@ -11,7 +11,7 @@ Imapsize has some key differences from the original:
 * user can define which folders to backup/restore by making filters. Default filter is applied to Calendar, Contacts and Deleteted Items
 
 # Dependencies
-* JAVA JDK 1.11
+* JAVA JDK 14
 
 # Bulding and running
 ./gradlew jar  --- to build the project \
